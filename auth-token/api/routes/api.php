@@ -1,6 +1,10 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Bus\Batch;
+use App\Jobs\JobSendEmailLog;
+use App\Jobs\JobSendEmailLogBatch;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\UserController;
@@ -30,4 +34,35 @@ Route::middleware(['auth:sanctum', 'verified.api'])->prefix('users')->controller
     Route::get('/', function () {
         return response()->json(User::all());
     })->name('index');
+});
+
+Route::get('test-send-mail', function() {
+    $mails = [
+        'nbngoc.it@gmail.com',
+        'nbngoc.it-1@gmail.com',
+        'nbngoc.it-2@gmail.com',
+        'nbngoc.it-3@gmail.com',
+    ];
+    foreach ($mails as $value) {
+        $mailForTesting = new JobSendEmailLog($value);
+        dispatch($mailForTesting)->delay(now()->addMinutes(1));
+    }
+   
+});
+
+
+Route::get('test-send-mail-batches', function() {
+    
+    $batch = Bus::batch([
+        new JobSendEmailLogBatch('nbngoc.it@gmail.com'),
+        new JobSendEmailLogBatch(''),
+        new JobSendEmailLogBatch('nbngoc.it-2@gmail.com'),
+    ])->then(function (Batch $batch) {
+        // All jobs completed successfully...
+    })->catch(function (Batch $batch, Throwable $e) {
+        // First batch job failure detected...
+    })->finally(function (Batch $batch) {
+        // The batch has finished executing...
+    })->name('test-send-mail-batches')->dispatch();
+    return $batch->id;
 });
